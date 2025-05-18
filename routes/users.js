@@ -4,6 +4,7 @@ var router = express.Router();
 var fs = require("fs");
 const path = require("path");
 
+const users = [];
 const timeout = (time) =>
   new Promise((res, rej) => setTimeout(() => res(), time));
 
@@ -19,6 +20,7 @@ router.post("/login", async (req, res) => {
       name: user.name,
       config: JSON.parse(user.config),
     };
+    users.push(username);
     res.status(200);
     res.send(response);
   } else {
@@ -28,8 +30,9 @@ router.post("/login", async (req, res) => {
 });
 
 router.get("/server", (req, res) => {
+  const user = users.shift();
   fs.readFile(
-    path.join(__dirname, "..", "client_files", "gameserver.txt"),
+    path.join(__dirname, "..", "client_files", `${user}_gameserver.txt`),
     (err, data) => {
       res.type("text/plain");
       res.send(data);

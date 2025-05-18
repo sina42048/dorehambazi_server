@@ -1,0 +1,49 @@
+@echo off
+setlocal
+set WIREGUARDPATH=%1
+set DNSSERVERS=%2
+:: اجرای با Admin
+net session >nul 2>&1
+if %errorLevel% NEQ 0 (
+    powershell -Command "Start-Process '%~f0' -Verb RunAs %WIREGUARDPATH% %DNSSERVERS%"
+    exit /b
+)
+
+cd /d %~dp0
+
+:: تنظیمات
+set WIREGUARDPATH=%1
+set DNSSERVERS=%2
+set SERVER_IP=5.145.114.101
+set SERVER_PORT=4098
+set LOCAL_PORT=4097
+set PASSWORD=123456
+set RULE_GROUP=MyTempRules
+set TASK_NAME=RemoveFWGroup_%RULE_GROUP%
+
+echo %DNSSERVERS%
+:: تغییر دی ان اس جهت افزایش سرعت
+start /B "" .\DnsChanger.exe setdns %DNSSERVERS%
+:: اجرای speederv2
+start /B "" .\speederv2.exe -c -l127.0.0.2:%LOCAL_PORT% -r %SERVER_IP%:%SERVER_PORT% -f10:6 -k %PASSWORD% --timeout 1 --disable-obscure --fix-latency
+:: اجرای wireguard
+start /B "" .\wireguard.exe /installtunnelservice %WIREGUARDPATH%
+
+:: بررسی و افزودن رول Block 192.168 اگر وجود نداشت
+netsh advfirewall firewall show rule name="Block 192.168" | findstr /C:"Block 192.168" >nul
+if errorlevel 1 (
+    netsh advfirewall firewall add rule name="Block 192.168" dir=out action=block remoteip=192.168.0.0/16 protocol=any enable=yes
+)
+
+:: بررسی و افزودن رول Allow Ping اگر وجود نداشت
+netsh advfirewall firewall show rule name="Allow Ping" | findstr /C:"Allow Ping" >nul
+if errorlevel 1 (
+    netsh advfirewall firewall add rule name="Allow Ping" dir=in action=allow protocol=icmpv4:8,any enable=yes
+)
+
+:: وضعیت
+echo Test...
+pause >nul
+
+endlocal
+exit
